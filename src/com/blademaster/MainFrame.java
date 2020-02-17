@@ -1,4 +1,4 @@
-package com.example;
+package com.blademaster;
 
 import java.awt.Color;
 import java.awt.EventQueue;
@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.util.LinkedList;
 import java.util.List;
 
 import javax.swing.JFrame;
@@ -49,21 +50,27 @@ public class MainFrame extends JFrame {
 	private static final long serialVersionUID = 1L;
 
 	private JPanel contentPane;
-
+	private List<File> files;
+	private List<Integer> images_width = new LinkedList<>();//初始化java.util.List对象
+	private List<Integer> images_height = new LinkedList<>();
 	//当前文件数据
-	private int currentImage_Width;
-	private int currentImage_Height;
 	private BufferedImage currentBufferedImage;
+	private BufferedImage compressed_bufferedImage;
+	private int currentImageCount;//当前的图片是第几张
 	
 	//响应Dialog的动作
 	public JButton buttonMifDialogOK;//只有JButton有doClick方法
 	private int currentProgress;
-	private int totalMifSize;
-
+	private int totalMifByte;
+	
+	//传给Dialog的信息
+	private String mifInformation;
+	
 	private mifDialog dialog;
 	
-	private List<File> files;
 	private JTextField txtProductedByBlademaster;
+	private JTextField textField_photoCount;
+
 	/**
 	 * Launch the application.
 	 */
@@ -241,6 +248,48 @@ public class MainFrame extends JFrame {
 		textArea_6.setBounds(603, 167, 56, 21);
 		contentPane.add(textArea_6);
 		
+		txtProductedByBlademaster = new JTextField();
+		txtProductedByBlademaster.setEditable(false);
+		txtProductedByBlademaster.setBackground(SystemColor.control);
+		txtProductedByBlademaster.setHorizontalAlignment(SwingConstants.CENTER);
+		txtProductedByBlademaster.setText("Producted by blademaster");
+		txtProductedByBlademaster.setBounds(194, 394, 164, 24);
+		contentPane.add(txtProductedByBlademaster);
+		txtProductedByBlademaster.setColumns(10);
+		
+		JTextArea textArea_13 = new JTextArea();
+		textArea_13.setEditable(false);
+		textArea_13.setBackground(SystemColor.control);
+		textArea_13.setText("\u9884\u89C8");
+		textArea_13.setBounds(383, 73, 31, 24);
+		contentPane.add(textArea_13);
+		
+		JTextArea textArea_14 = new JTextArea();
+		textArea_14.setText("\u539F\u56FE");
+		textArea_14.setEditable(false);
+		textArea_14.setBackground(SystemColor.menu);
+		textArea_14.setBounds(132, 73, 31, 24);
+		contentPane.add(textArea_14);
+		
+		textField_photoCount = new JTextField();
+		textField_photoCount.setText("0/0");
+		textField_photoCount.setBackground(Color.WHITE);
+		textField_photoCount.setEditable(false);
+		textField_photoCount.setHorizontalAlignment(SwingConstants.CENTER);
+		textField_photoCount.setBounds(255, 66, 46, 21);
+		contentPane.add(textField_photoCount);
+		textField_photoCount.setColumns(10);
+		
+		JButton button_front = new JButton("<<\u4E0A\u4E00\u5F20");
+		button_front.setBounds(25, 62, 89, 29);
+		button_front.setVisible(false);
+		contentPane.add(button_front);
+		
+		JButton button_next = new JButton("\u4E0B\u4E00\u5F20>>");
+		button_next.setBounds(435, 63, 89, 29);
+		button_next.setVisible(false);
+		contentPane.add(button_next);
+		
 		//图像框
 		JLabel label_before = new JLabel("");
 		label_before.setBounds(10, 10, 229, 229);
@@ -268,19 +317,29 @@ public class MainFrame extends JFrame {
 				// TODO 自动生成的方法存根
 				try {
 					files  = (java.util.List<File>) t.getTransferData(DataFlavor.javaFileListFlavor);//只有List类型可以成功强制转换文件们
-                    
+					button_front.setVisible(false);
+                	button_next.setVisible(false);
+					if(files.size() > 1) {
+                    	button_next.setVisible(true);
+                    }
+					textField_photoCount.setText(1 + "/" + files.size());
+					
                     String string = "";
+                    images_width.clear();//清空List
+                    images_height.clear();
                     for(File f:files) {
                     	string = string + f.getPath() + "\n";
+                    	Image image = ImageIO.read(f);
+                    	images_width.add(image.getWidth(null));
+                    	images_height.add(image.getHeight(null));
                     }
-                    textArea.setText(string);;
+                    textArea.setText(string);
                     currentBufferedImage = ImageIO.read(files.get(0));
-                    currentImage_Width = currentBufferedImage.getWidth();
-                    currentImage_Height = currentBufferedImage.getHeight();
                     label_after.setIcon(null);
                     setSameScaleFullImageForJLabel(label_before, currentBufferedImage);//显示图片
-                    spinner_width.setValue(currentImage_Width);
-                    spinner_height.setValue(currentImage_Height);
+                    currentImageCount = 0;//显示第一张图
+                    spinner_width.setValue(images_width.get(currentImageCount));
+                    spinner_height.setValue(images_height.get(currentImageCount));
                     return true;
                 }
                 catch (Exception e) {
@@ -306,13 +365,15 @@ public class MainFrame extends JFrame {
 			@Override
 			public void stateChanged(ChangeEvent e) {//当spinner内的数值发送变化时执行
 				// TODO 自动生成的方法存根
-				if((int)spinner_width.getValue() > currentImage_Width || currentImage_Width == 0) {//防止超过图片原始大小
-					spinner_width.setValue(currentImage_Width);
+				if((int)spinner_width.getValue() > images_width.get(currentImageCount) || images_width.get(currentImageCount) == 0) {//防止超过图片原始大小
+					spinner_width.setValue(images_width.get(currentImageCount));
 				}else if ((int)spinner_width.getValue() < 1) {
 					spinner_width.setValue(1);
 				}else if(checkBox_sameScale.isSelected()) {
-					spinner_height.setValue(Math.round((int)spinner_width.getValue() * (float)currentImage_Height / currentImage_Width));
+					spinner_height.setValue(Math.round((int)spinner_width.getValue() * (float)images_height.get(currentImageCount) / images_width.get(currentImageCount)));
 				}
+				//保存修改的宽（高修改时会自动调用spinner_height的ChangeListemer）
+				images_width.set(currentImageCount, (Integer)spinner_width.getValue());
 			}
 		});
 		
@@ -321,13 +382,15 @@ public class MainFrame extends JFrame {
 			@Override
 			public void stateChanged(ChangeEvent e) {//当spinner内的数值发送变化时执行
 				// TODO 自动生成的方法存根
-				if((int)spinner_height.getValue() > currentImage_Height || currentImage_Height == 0) {//防止超过图片原始大小
-					spinner_height.setValue(currentImage_Height);
+				if((int)spinner_height.getValue() > images_height.get(currentImageCount) || images_height.get(currentImageCount) == 0) {//防止超过图片原始大小
+					spinner_height.setValue(images_height.get(currentImageCount));
 				}else if ((int)spinner_height.getValue() < 1) {
 					spinner_height.setValue(1);
 				}else if(checkBox_sameScale.isSelected()) {
-					spinner_width.setValue(Math.round((int)spinner_height.getValue() * (float)currentImage_Width / currentImage_Height));
+					spinner_width.setValue(Math.round((int)spinner_height.getValue() * (float)images_width.get(currentImageCount) / images_height.get(currentImageCount)));
 				}
+				//保存修改的宽高
+				images_height.set(currentImageCount, (Integer)spinner_height.getValue());
 			}
 		});
 		
@@ -367,7 +430,6 @@ public class MainFrame extends JFrame {
 		spinner_greenBit.setValue(3);
 		spinner_blueBit.setValue(3);
 		
-		txtProductedByBlademaster = new JTextField();
 		txtProductedByBlademaster.addMouseListener(new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
@@ -382,19 +444,60 @@ public class MainFrame extends JFrame {
 			}
 		});
 		
-		txtProductedByBlademaster.setEditable(false);
-		txtProductedByBlademaster.setBackground(SystemColor.control);
-		txtProductedByBlademaster.setHorizontalAlignment(SwingConstants.CENTER);
-		txtProductedByBlademaster.setText("Producted by blademaster");
-		txtProductedByBlademaster.setBounds(194, 394, 164, 24);
-		contentPane.add(txtProductedByBlademaster);
-		txtProductedByBlademaster.setColumns(10);
+		//前后图切换
+		button_front.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO 自动生成的方法存根
+				currentImageCount--;
+				button_next.setVisible(true);//能前一张说明后面必定有图
+				if(currentImageCount == 0) {
+					button_front.setVisible(false);
+				}
+				//设置当前图像宽高
+                spinner_width.setValue(images_width.get(currentImageCount));
+                spinner_height.setValue(images_height.get(currentImageCount));
+                
+                textField_photoCount.setText((currentImageCount + 1) + "/" + files.size());
+                //清空预览图、设置当前图像
+                label_after.setIcon(null);
+                try {
+                	currentBufferedImage = ImageIO.read(files.get(currentImageCount));
+					setSameScaleFullImageForJLabel(label_before, currentBufferedImage);
+				} catch (IOException e1) {
+					// TODO 自动生成的 catch 块
+					e1.printStackTrace();
+				}
+			}
+		});
 		
-		JTextArea textArea_13 = new JTextArea();
-		textArea_13.setBackground(SystemColor.control);
-		textArea_13.setText("   \u9884\u89C8");
-		textArea_13.setBounds(222, 66, 72, 21);
-		contentPane.add(textArea_13);
+		button_next.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// TODO 自动生成的方法存根
+				currentImageCount++;
+				button_front.setVisible(true);//能后一张说明前面必定有图
+				if(currentImageCount == files.size() - 1) {
+					button_next.setVisible(false);
+				}
+				//设置当前图像宽高
+                spinner_width.setValue(images_width.get(currentImageCount));
+                spinner_height.setValue(images_height.get(currentImageCount));
+                
+                textField_photoCount.setText((currentImageCount + 1) + "/" + files.size());
+                //清空预览图、设置当前图像
+                label_after.setIcon(null);
+                try {
+                	currentBufferedImage = ImageIO.read(files.get(currentImageCount));
+					setSameScaleFullImageForJLabel(label_before, currentBufferedImage);
+				} catch (IOException e1) {
+					// TODO 自动生成的 catch 块
+					e1.printStackTrace();
+				}
+			}
+		});
 		
 		//预览图
 		
@@ -403,7 +506,7 @@ public class MainFrame extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				// TODO 自动生成的方法存根
-				BufferedImage compressed_bufferedImage = getCompressedThumbnail(currentBufferedImage, (int)spinner_width.getValue(), (int)spinner_height.getValue(), Image.SCALE_SMOOTH);//压缩大小10X10可由UI指定
+				compressed_bufferedImage = getCompressedThumbnail(currentBufferedImage, (int)spinner_width.getValue(), (int)spinner_height.getValue(), Image.SCALE_SMOOTH);//压缩大小10X10可由UI指定
 				for(int i=0;i < compressed_bufferedImage.getHeight();i++) {//行数
 					for(int j=0;j < compressed_bufferedImage.getWidth();j++) {//列数
 						Color color = new Color(compressed_bufferedImage.getRGB(j, i));//类似屏幕扫描，先扫一行后扫一列，i为列数
@@ -418,20 +521,11 @@ public class MainFrame extends JFrame {
 			}
 		});
 		
-		
+		//输出预览图
 		button_photo.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				BufferedImage compressed_bufferedImage = getCompressedThumbnail(currentBufferedImage, (int)spinner_width.getValue(), (int)spinner_height.getValue(), Image.SCALE_SMOOTH);
-				for(int i=0;i < compressed_bufferedImage.getHeight();i++) {//行数
-					for(int j=0;j < compressed_bufferedImage.getWidth();j++) {//列数
-						Color color = new Color(compressed_bufferedImage.getRGB(j, i));//类似屏幕扫描，先扫一行后扫一列，i为列数
-						int compressed_red = colorCompressReturnInt(color.getRed(), (int)spinner_redBit.getValue());
-						int compressed_green = colorCompressReturnInt(color.getGreen(), (int)spinner_greenBit.getValue());
-						int compressed_blue = colorCompressReturnInt(color.getBlue(), (int)spinner_blueBit.getValue());
-						color = new Color(compressed_red, compressed_green, compressed_blue);
-						compressed_bufferedImage.setRGB(j, i, color.getRGB());//更改为压缩后的颜色
-					}
-				}
+				
+				button_preview.doClick();
 				try {
 					ImageIO.write(compressed_bufferedImage, "png", new File(files.get(0).getPath().split("\\.")[0] + "_thumbnail.png"));
 				} catch (IOException e1) {
@@ -467,43 +561,57 @@ public class MainFrame extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				// TODO 自动生成的方法存根
 				try {
-					//图片压缩
-					BufferedImage compressed_bufferedImage = getCompressedThumbnail(currentBufferedImage, (int)spinner_width.getValue(), (int)spinner_height.getValue(), Image.SCALE_SMOOTH);//压缩大小10X10可由UI指定
-					totalMifSize = compressed_bufferedImage.getWidth() * compressed_bufferedImage.getHeight();//转递图片总大小
 					int color_bytesCount = ((int)spinner_redBit.getValue() + (int)spinner_greenBit.getValue() + (int)spinner_blueBit.getValue()) / 8;//每个颜色所占的比特数
+					totalMifByte = 0;
+					currentProgress = 0;
+					int currentByte = 0;
+					mifInformation = "";
+					for(int f=0;f<files.size();f++) {
+						totalMifByte += images_width.get(f) * images_height.get(f);
+					}
 					//创建并初始化mif文件
 					File file = new File(files.get(0).getPath().split("\\.")[0] + ".mif");
 					FileOutputStream fileOutputStream = new FileOutputStream(file);
 					OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fileOutputStream);
 					BufferedWriter bufferedWriter = new BufferedWriter(outputStreamWriter);
 					bufferedWriter.write("WIDTH=8;\n");
-					bufferedWriter.write("DEPTH=" + compressed_bufferedImage.getWidth() * compressed_bufferedImage.getHeight() * color_bytesCount + ";\n");//可以存储的bit位数
+					bufferedWriter.write("DEPTH=" + (totalMifByte * color_bytesCount) + ";\n");//可以存储的bit位数
 					bufferedWriter.newLine();
 					bufferedWriter.write("ADDRESS_RADIX=UNS;\n");
 					bufferedWriter.write("DATA_RADIX=BIN;\n");
 					bufferedWriter.newLine();
 					bufferedWriter.write("CONTENT BEGIN\n");
 					
-					while(dialog.getRBG_type() == null || dialog.getRBG_type() == "") {
-					}
-					//先行后列读取颜色
-					for(int i=0;i < compressed_bufferedImage.getHeight();i++) {//行数
-						for(int j=0;j < compressed_bufferedImage.getWidth();j++) {//列数
-							Color color = new Color(compressed_bufferedImage.getRGB(j, i));//类似屏幕扫描，先扫一行后扫一列，i为列数
-							String compressed_color = "";
-							for(int k=0;k<3;k++) {
-								if(dialog.getRBG_type().charAt(k) == 'R') {
-									compressed_color = compressed_color + colorCompressReturnBit(color.getRed(), (int)spinner_redBit.getValue());
-								}else if (dialog.getRBG_type().charAt(k) == 'G') {
-									compressed_color = compressed_color + colorCompressReturnBit(color.getGreen(), (int)spinner_greenBit.getValue());
-								}else {
-									compressed_color = compressed_color + colorCompressReturnBit(color.getBlue(), (int)spinner_blueBit.getValue());
-								}
-							}
-							bufferedWriter.write("\t" + (i * compressed_bufferedImage.getWidth() + j) + "\t:\t" + compressed_color + ";\n");
-							currentProgress = i * compressed_bufferedImage.getWidth() + j + 1;
+					//逐张图片处理
+					for(int f=0;f<files.size();f++) {
+						//图片压缩
+						BufferedImage compressed_bufferedImage = getCompressedThumbnail(currentBufferedImage, images_width.get(f), images_height.get(f), Image.SCALE_SMOOTH);//压缩大小10X10可由UI指定
+						
+						while(dialog.getRBG_type() == null || dialog.getRBG_type() == "") {
 						}
+						//先行后列读取颜色
+						for(int i=0;i < compressed_bufferedImage.getHeight();i++) {//行数
+							for(int j=0;j < compressed_bufferedImage.getWidth();j++) {//列数
+								Color color = new Color(compressed_bufferedImage.getRGB(j, i));//类似屏幕扫描，先扫一行后扫一列，i为列数
+								String compressed_color = "";
+								for(int k=0;k<3;k++) {
+									if(dialog.getRBG_type().charAt(k) == 'R') {
+										compressed_color = compressed_color + colorCompressReturnBit(color.getRed(), (int)spinner_redBit.getValue());
+									}else if (dialog.getRBG_type().charAt(k) == 'G') {
+										compressed_color = compressed_color + colorCompressReturnBit(color.getGreen(), (int)spinner_greenBit.getValue());
+									}else {
+										compressed_color = compressed_color + colorCompressReturnBit(color.getBlue(), (int)spinner_blueBit.getValue());
+									}
+								}
+								bufferedWriter.write("\t" + (i * compressed_bufferedImage.getWidth() + j + currentByte) + "\t:\t" + compressed_color + ";\n");
+							}
+							currentProgress += compressed_bufferedImage.getWidth();
+						}
+						mifInformation = mifInformation + currentByte;
+						currentByte += compressed_bufferedImage.getWidth() * compressed_bufferedImage.getHeight();
+						mifInformation = mifInformation + " ~ " + (currentByte - 1) + " : " + files.get(f) + "\n";
 					}
+					
 					bufferedWriter.write("END;\n");
 					bufferedWriter.close();
 				} catch (IOException e1) {
@@ -587,8 +695,10 @@ public class MainFrame extends JFrame {
 	public int getCurrentProgress() {
 		return currentProgress;
 	}
-	public int getTotalMifSize() {
-		return totalMifSize;
+	public int getTotalMifByte() {
+		return totalMifByte;
 	}
-	
+	public String getMifInformation() {
+		return mifInformation;
+	}
 }
