@@ -21,6 +21,7 @@ import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+
 import javax.swing.JTextArea;
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
@@ -59,7 +60,6 @@ public class MainFrame extends JFrame {
 	private int currentImageCount;//当前的图片是第几张
 	
 	//响应Dialog的动作
-	public JButton buttonMifDialogOK;//只有JButton有doClick方法
 	private int currentProgress;
 	private int totalMifByte;
 	
@@ -70,6 +70,10 @@ public class MainFrame extends JFrame {
 	
 	private JTextField txtProductedByBlademaster;
 	private JTextField textField_photoCount;
+
+	protected boolean mifComplete;//指示mif转化完成情况
+
+	protected Object lock_MifDialogOK = new Object();
 
 	/**
 	 * Launch the application.
@@ -563,74 +567,81 @@ public class MainFrame extends JFrame {
 				}
 			}
 		});
-		
-		buttonMifDialogOK = new JButton();
-		buttonMifDialogOK.addActionListener(new ActionListener() {
+		new Thread(new Runnable() {
 			
 			@Override
-			public void actionPerformed(ActionEvent e) {
+			public void run() {
 				// TODO 自动生成的方法存根
-				try {
-					int color_bytesCount = ((int)spinner_redBit.getValue() + (int)spinner_greenBit.getValue() + (int)spinner_blueBit.getValue()) / 8;//每个颜色所占的比特数
-					totalMifByte = 0;
-					currentProgress = 0;
-					int currentByte = 0;
-					mifInformation = "";
-					for(int f=0;f<files.size();f++) {
-						totalMifByte += images_width.get(f) * images_height.get(f);
-					}
-					//创建并初始化mif文件
-					File file = new File(files.get(0).getPath().split("\\.")[0] + ".mif");
-					FileOutputStream fileOutputStream = new FileOutputStream(file);
-					OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fileOutputStream);
-					BufferedWriter bufferedWriter = new BufferedWriter(outputStreamWriter);
-					bufferedWriter.write("WIDTH=8;\n");
-					bufferedWriter.write("DEPTH=" + (totalMifByte * color_bytesCount) + ";\n");//可以存储的bit位数
-					bufferedWriter.newLine();
-					bufferedWriter.write("ADDRESS_RADIX=UNS;\n");
-					bufferedWriter.write("DATA_RADIX=BIN;\n");
-					bufferedWriter.newLine();
-					bufferedWriter.write("CONTENT BEGIN\n");
-					
-					//逐张图片处理
-					for(int f=0;f<files.size();f++) {
-						//图片压缩
-						BufferedImage compressed_bufferedImage = getCompressedThumbnail(currentBufferedImage, images_width.get(f), images_height.get(f), Image.SCALE_SMOOTH);//压缩大小10X10可由UI指定
-						
-						while(dialog.getRBG_type() == null || dialog.getRBG_type() == "") {
-						}
-						//先行后列读取颜色
-						for(int i=0;i < compressed_bufferedImage.getHeight();i++) {//行数
-							for(int j=0;j < compressed_bufferedImage.getWidth();j++) {//列数
-								Color color = new Color(compressed_bufferedImage.getRGB(j, i));//类似屏幕扫描，先扫一行后扫一列，i为列数
-								String compressed_color = "";
-								for(int k=0;k<3;k++) {
-									if(dialog.getRBG_type().charAt(k) == 'R') {
-										compressed_color = compressed_color + colorCompressReturnBit(color.getRed(), (int)spinner_redBit.getValue());
-									}else if (dialog.getRBG_type().charAt(k) == 'G') {
-										compressed_color = compressed_color + colorCompressReturnBit(color.getGreen(), (int)spinner_greenBit.getValue());
-									}else {
-										compressed_color = compressed_color + colorCompressReturnBit(color.getBlue(), (int)spinner_blueBit.getValue());
-									}
-								}
-								bufferedWriter.write("\t" + (i * compressed_bufferedImage.getWidth() + j + currentByte) + "\t:\t" + compressed_color + ";\n");
+				while (true) {
+					synchronized (lock_MifDialogOK) {
+						try {
+							lock_MifDialogOK.wait();// 锁定
+							//TODO 添加对button_mif的设置对恶意关闭Dialog进行处理，会使UI错误
+							//button_mif.setEnabled(false);
+							int color_bytesCount = ((int) spinner_redBit.getValue() + (int) spinner_greenBit.getValue() + (int) spinner_blueBit.getValue()) / 8;// 每个颜色所占的比特数
+							totalMifByte = 0;
+							currentProgress = 0;
+							int currentByte = 0;
+							mifInformation = "";
+							mifComplete = false;
+							for (int f = 0; f < files.size(); f++) {
+								totalMifByte += images_width.get(f) * images_height.get(f);
 							}
-							currentProgress += compressed_bufferedImage.getWidth();
+							// 创建并初始化mif文件
+							File file = new File(files.get(0).getPath().split("\\.")[0] + ".mif");
+							FileOutputStream fileOutputStream = new FileOutputStream(file);
+							OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fileOutputStream);
+							BufferedWriter bufferedWriter = new BufferedWriter(outputStreamWriter);
+							bufferedWriter.write("WIDTH=8;\n");
+							bufferedWriter.write("DEPTH=" + (totalMifByte * color_bytesCount) + ";\n");// 可以存储的bit位数
+							bufferedWriter.newLine();
+							bufferedWriter.write("ADDRESS_RADIX=UNS;\n");
+							bufferedWriter.write("DATA_RADIX=BIN;\n");
+							bufferedWriter.newLine();
+							bufferedWriter.write("CONTENT BEGIN\n");
+
+							// 逐张图片处理
+							for (int f = 0; f < files.size(); f++) {
+								// 图片压缩
+								BufferedImage compressed_bufferedImage = getCompressedThumbnail(currentBufferedImage, images_width.get(f), images_height.get(f), Image.SCALE_SMOOTH);// 压缩大小10X10可由UI指定
+
+								while (dialog.getRBG_type() == null || dialog.getRBG_type() == "") {
+								}
+								// 先行后列读取颜色
+								for (int i = 0; i < compressed_bufferedImage.getHeight(); i++) {// 行数
+									for (int j = 0; j < compressed_bufferedImage.getWidth(); j++) {// 列数
+										Color color = new Color(compressed_bufferedImage.getRGB(j, i));// 类似屏幕扫描，先扫一行后扫一列，i为列数
+										String compressed_color = "";
+										for (int k = 0; k < 3; k++) {
+											if (dialog.getRBG_type().charAt(k) == 'R') {
+												compressed_color = compressed_color + colorCompressReturnBit(color.getRed(), (int) spinner_redBit.getValue());
+											} else if (dialog.getRBG_type().charAt(k) == 'G') {
+												compressed_color = compressed_color + colorCompressReturnBit(color.getGreen(), (int) spinner_greenBit.getValue());
+											} else {
+												compressed_color = compressed_color + colorCompressReturnBit(color.getBlue(), (int) spinner_blueBit.getValue());
+											}
+										}
+										bufferedWriter.write("\t" + (i * compressed_bufferedImage.getWidth() + j + currentByte) + "\t:\t" + compressed_color + ";\n");
+									}
+									currentProgress += compressed_bufferedImage.getWidth();
+								}
+								mifInformation = mifInformation + currentByte;
+								currentByte += compressed_bufferedImage.getWidth() * compressed_bufferedImage.getHeight();
+								mifInformation = mifInformation + " ~ " + (currentByte - 1) + " : " + files.get(f) + "\n";
+							}
+
+							bufferedWriter.write("END;\n");
+							bufferedWriter.close();
+							mifComplete = true;
+							//button_mif.setEnabled(true);
+						} catch (InterruptedException | IOException e1) {
+							// TODO 自动生成的 catch 块
+							e1.printStackTrace();
 						}
-						mifInformation = mifInformation + currentByte;
-						currentByte += compressed_bufferedImage.getWidth() * compressed_bufferedImage.getHeight();
-						mifInformation = mifInformation + " ~ " + (currentByte - 1) + " : " + files.get(f) + "\n";
 					}
-					
-					bufferedWriter.write("END;\n");
-					bufferedWriter.close();
-				} catch (IOException e1) {
-					// TODO 自动生成的 catch 块
-					e1.printStackTrace();
 				}
 			}
-		});
-		
+		}).start();
 		
 	}
 	/**
@@ -710,5 +721,11 @@ public class MainFrame extends JFrame {
 	}
 	public String getMifInformation() {
 		return mifInformation;
+	}
+	public boolean isMifComplete() {
+		return mifComplete;
+	}
+	public void setMifComplete(boolean b) {
+		mifComplete = b;
 	}
 }

@@ -92,50 +92,49 @@ public class mifDialog extends JDialog {
 				okButton.addActionListener(new ActionListener() {
 					public void actionPerformed(ActionEvent e) {//生成mif
 						progressBar.setStringPainted(true);//显示进度（默认）/自定义字符
+						progressBar.setString(null);//清空文字
 						RBG_type = (String) comboBox.getSelectedItem();
-						
-						new Thread(new Runnable() {//防止阻塞UI
-							
-							@Override
-							public void run() {
-								// TODO 自动生成的方法存根
-								while (mainframe.getTotalMifByte() == 0) {
-									if (progressBar.getValue() < 99) {
-										progressBar.setValue(1 + progressBar.getValue());
-										try {
-											Thread.sleep(50);
-										} catch (InterruptedException e) {
-											// TODO 自动生成的 catch 块
-											e.printStackTrace();
-										}
-									}
-								}
-								progressBar.setMaximum(mainframe.getTotalMifByte());//达到百分之百的数值，通常为文件的大小等
-								while (mainframe.getCurrentProgress() != mainframe.getTotalMifByte()) {
-									progressBar.setValue(mainframe.getCurrentProgress());
-								}
-								try {
-									Thread.sleep(500);//等待information更新
-								} catch (InterruptedException e) {
-									// TODO 自动生成的 catch 块
-									e.printStackTrace();
-								}
-								progressBar.setString("转换成功");
-								textArea_information.setText(mainframe.getMifInformation());
-								textArea_information.setCaretPosition(0);//滚动条置顶，即让光标置于textArea的开头
-							}
-						}).start();
+
+						okButton.setEnabled(false);
+						synchronized (mainframe.lock_MifDialogOK) {
+							mainframe.lock_MifDialogOK.notify();//解锁
+						}
+
+//						while (mainframe.getTotalMifByte() == 0 || mainframe.getCurrentProgress() == 0) {
+//							if (progressBar.getValue() < 99) {
+//								progressBar.setValue(1 + progressBar.getValue());
+//								try {
+//									Thread.sleep(50);
+//								} catch (InterruptedException e1) {
+//									// TODO 自动生成的 catch 块
+//									e1.printStackTrace();
+//								}
+//							}
+//						}
+						// progressBar.setMaximum(mainframe.getTotalMifByte());//达到百分之百的数值，通常为文件的大小等
 						
 						new Thread(new Runnable() {
 							
 							@Override
 							public void run() {
 								// TODO 自动生成的方法存根
-								okButton.setEnabled(false);
-								mainframe.buttonMifDialogOK.doClick();//通过虚拟按键让主程序生成mif文件（产生阻塞）
+								while (!mainframe.isMifComplete()) {
+									int getCurrentProgress = mainframe.getCurrentProgress();
+									int getTotalMifByte = mainframe.getTotalMifByte();
+									if(getTotalMifByte == 0) break;//防止分母为0抛出ArithmeticException
+									//TODO 删除System.err.println会出现死循环的问题
+									System.err.println("");
+									progressBar.setValue(getCurrentProgress * 100 / getTotalMifByte);
+								}
+								progressBar.setValue(progressBar.getMaximum());
+								progressBar.setString("转换成功");
+								textArea_information.setText(mainframe.getMifInformation());
+								textArea_information.setCaretPosition(0);// 滚动条置顶，即让光标置于textArea的开头
+								mainframe.setMifComplete(false);
+								okButton.setEnabled(true);
 							}
 						}).start();
-						
+
 					}
 				});
 				okButton.setActionCommand("OK");
