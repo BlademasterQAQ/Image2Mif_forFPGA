@@ -92,19 +92,50 @@ public class mifDialog extends JDialog {
 				okButton.addActionListener(new ActionListener() {
 					public void actionPerformed(ActionEvent e) {//生成mif
 						progressBar.setStringPainted(true);//显示进度（默认）/自定义字符
-						progressBar.setString("0");
 						RBG_type = (String) comboBox.getSelectedItem();
-						mainframe.buttonMifDialogOK.doClick();//通过虚拟按键让主程序生成mif文件
-
-						while (mainframe.getTotalMifByte() == 0) {
-						}
-						progressBar.setMaximum(mainframe.getTotalMifByte());//达到百分之百的数值，通常为文件的大小等
-						while (mainframe.getCurrentProgress() != mainframe.getTotalMifByte()) {
-							progressBar.setValue(mainframe.getCurrentProgress());
-						}
-						progressBar.setString("转换成功");
-						textArea_information.setText(mainframe.getMifInformation());
-						textArea_information.setCaretPosition(0);//滚动条置顶，即让光标置于textArea的开头
+						
+						new Thread(new Runnable() {//防止阻塞UI
+							
+							@Override
+							public void run() {
+								// TODO 自动生成的方法存根
+								while (mainframe.getTotalMifByte() == 0) {
+									if (progressBar.getValue() < 99) {
+										progressBar.setValue(1 + progressBar.getValue());
+										try {
+											Thread.sleep(50);
+										} catch (InterruptedException e) {
+											// TODO 自动生成的 catch 块
+											e.printStackTrace();
+										}
+									}
+								}
+								progressBar.setMaximum(mainframe.getTotalMifByte());//达到百分之百的数值，通常为文件的大小等
+								while (mainframe.getCurrentProgress() != mainframe.getTotalMifByte()) {
+									progressBar.setValue(mainframe.getCurrentProgress());
+								}
+								try {
+									Thread.sleep(500);//等待information更新
+								} catch (InterruptedException e) {
+									// TODO 自动生成的 catch 块
+									e.printStackTrace();
+								}
+								progressBar.setString("转换成功");
+								textArea_information.setText(mainframe.getMifInformation());
+								textArea_information.setCaretPosition(0);//滚动条置顶，即让光标置于textArea的开头
+							}
+						}).start();
+						
+						new Thread(new Runnable() {
+							
+							@Override
+							public void run() {
+								// TODO 自动生成的方法存根
+								okButton.setEnabled(false);
+								mainframe.buttonMifDialogOK.doClick();//通过虚拟按键让主程序生成mif文件（产生阻塞）
+							}
+						}).start();
+						
 					}
 				});
 				okButton.setActionCommand("OK");

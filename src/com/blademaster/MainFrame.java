@@ -365,12 +365,17 @@ public class MainFrame extends JFrame {
 			@Override
 			public void stateChanged(ChangeEvent e) {//当spinner内的数值发送变化时执行
 				// TODO 自动生成的方法存根
-				if((int)spinner_width.getValue() > images_width.get(currentImageCount) || images_width.get(currentImageCount) == 0) {//防止超过图片原始大小
-					spinner_width.setValue(images_width.get(currentImageCount));
-				}else if ((int)spinner_width.getValue() < 1) {
-					spinner_width.setValue(1);
-				}else if(checkBox_sameScale.isSelected()) {
-					spinner_height.setValue(Math.round((int)spinner_width.getValue() * (float)images_height.get(currentImageCount) / images_width.get(currentImageCount)));
+				try {
+					if((int)spinner_width.getValue() > ImageIO.read(files.get(currentImageCount)).getWidth() || images_width.get(currentImageCount) == 0) {//防止超过图片原始大小
+						spinner_width.setValue(images_width.get(currentImageCount));
+					}else if ((int)spinner_width.getValue() < 1) {
+						spinner_width.setValue(1);
+					}else if(checkBox_sameScale.isSelected()) {
+						spinner_height.setValue(Math.round((int)spinner_width.getValue() * (float)images_height.get(currentImageCount) / images_width.get(currentImageCount)));
+					}
+				} catch (IOException e1) {
+					// TODO 自动生成的 catch 块
+					e1.printStackTrace();
 				}
 				//保存修改的宽（高修改时会自动调用spinner_height的ChangeListemer）
 				images_width.set(currentImageCount, (Integer)spinner_width.getValue());
@@ -382,12 +387,17 @@ public class MainFrame extends JFrame {
 			@Override
 			public void stateChanged(ChangeEvent e) {//当spinner内的数值发送变化时执行
 				// TODO 自动生成的方法存根
-				if((int)spinner_height.getValue() > images_height.get(currentImageCount) || images_height.get(currentImageCount) == 0) {//防止超过图片原始大小
-					spinner_height.setValue(images_height.get(currentImageCount));
-				}else if ((int)spinner_height.getValue() < 1) {
-					spinner_height.setValue(1);
-				}else if(checkBox_sameScale.isSelected()) {
-					spinner_width.setValue(Math.round((int)spinner_height.getValue() * (float)images_width.get(currentImageCount) / images_height.get(currentImageCount)));
+				try {
+					if((int)spinner_height.getValue() > ImageIO.read(files.get(currentImageCount)).getHeight() || images_height.get(currentImageCount) == 0) {//防止超过图片原始大小
+						spinner_height.setValue(images_height.get(currentImageCount));
+					}else if ((int)spinner_height.getValue() < 1) {
+						spinner_height.setValue(1);
+					}else if(checkBox_sameScale.isSelected()) {
+						spinner_width.setValue(Math.round((int)spinner_height.getValue() * (float)images_width.get(currentImageCount) / images_height.get(currentImageCount)));
+					}
+				} catch (IOException e1) {
+					// TODO 自动生成的 catch 块
+					e1.printStackTrace();
 				}
 				//保存修改的宽高
 				images_height.set(currentImageCount, (Integer)spinner_height.getValue());
