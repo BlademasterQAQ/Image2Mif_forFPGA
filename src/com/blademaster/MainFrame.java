@@ -603,9 +603,11 @@ public class MainFrame extends JFrame {
 							// 逐张图片处理
 							for (int f = 0; f < files.size(); f++) {
 								// 图片压缩
-								BufferedImage compressed_bufferedImage = getCompressedThumbnail(currentBufferedImage, images_width.get(f), images_height.get(f), Image.SCALE_SMOOTH);// 压缩大小10X10可由UI指定
-
-								while (dialog.getRBG_type() == null || dialog.getRBG_type() == "") {
+								BufferedImage compressed_bufferedImage;
+								if(dialog.is_checkBox_useFirstInformation_Selected()) {//以第一个图片的宽高数据作为所有图像的宽高数据，便于批量操作
+									compressed_bufferedImage = getCompressedThumbnail(ImageIO.read(files.get(f)), images_width.get(0), images_height.get(0), Image.SCALE_SMOOTH);
+								}else {
+									compressed_bufferedImage = getCompressedThumbnail(ImageIO.read(files.get(f)), images_width.get(f), images_height.get(f), Image.SCALE_SMOOTH);
 								}
 								// 先行后列读取颜色
 								for (int i = 0; i < compressed_bufferedImage.getHeight(); i++) {// 行数

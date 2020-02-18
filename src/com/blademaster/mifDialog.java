@@ -14,6 +14,7 @@ import javax.swing.JProgressBar;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import javax.swing.JScrollPane;
+import javax.swing.JCheckBox;
 
 public class mifDialog extends JDialog {
 
@@ -24,6 +25,7 @@ public class mifDialog extends JDialog {
 
 	private final JPanel contentPanel = new JPanel();
 	private JTextArea textArea_information;
+	private JCheckBox checkBox_useFirstInformation;
 	
 	private String RBG_type;
 
@@ -53,14 +55,14 @@ public class mifDialog extends JDialog {
 		{
 			JTextArea txtrRgb = new JTextArea();
 			txtrRgb.setEditable(false);
-			txtrRgb.setBounds(81, 21, 101, 24);
+			txtrRgb.setBounds(34, 23, 101, 24);
 			txtrRgb.setText("RGB\u7684\u6392\u5217\u65B9\u5F0F\uFF1A");
 			txtrRgb.setBackground(SystemColor.menu);
 			contentPanel.add(txtrRgb);
 		}
 		
 		JComboBox<String> comboBox = new JComboBox<String>();
-		comboBox.setBounds(191, 22, 52, 23);
+		comboBox.setBounds(135, 23, 52, 23);
 		contentPanel.add(comboBox);
 		
 		JProgressBar progressBar = new JProgressBar();		
@@ -68,7 +70,7 @@ public class mifDialog extends JDialog {
 		contentPanel.add(progressBar);
 		
 		JScrollPane scrollPane = new JScrollPane();
-		scrollPane.setBounds(47, 72, 252, 83);
+		scrollPane.setBounds(47, 82, 252, 73);
 		contentPanel.add(scrollPane);
 		{
 			textArea_information = new JTextArea();
@@ -80,9 +82,20 @@ public class mifDialog extends JDialog {
 			txtrMif.setText("mif\u6587\u4EF6\u4FE1\u606F");
 			txtrMif.setEditable(false);
 			txtrMif.setBackground(SystemColor.menu);
-			txtrMif.setBounds(137, 48, 75, 24);
+			txtrMif.setBounds(137, 56, 75, 24);
 			contentPanel.add(txtrMif);
 		}
+		
+		checkBox_useFirstInformation = new JCheckBox("");
+		checkBox_useFirstInformation.setBounds(208, 26, 21, 21);
+		contentPanel.add(checkBox_useFirstInformation);
+		
+		JTextArea textArea = new JTextArea();
+		textArea.setEditable(false);
+		textArea.setBackground(SystemColor.control);
+		textArea.setText("\u7EDF\u4E00\u4F7F\u7528\u7B2C\u4E00\n \u5F20\u56FE\u7684\u5BBD\u9AD8");
+		textArea.setBounds(229, 15, 82, 44);
+		contentPanel.add(textArea);
 		{
 			JPanel buttonPane = new JPanel();
 			buttonPane.setLayout(new FlowLayout(FlowLayout.RIGHT));
@@ -164,5 +177,9 @@ public class mifDialog extends JDialog {
 	
 	public String getRBG_type() {
 		return RBG_type;
+	}
+
+	public boolean is_checkBox_useFirstInformation_Selected() {
+		return checkBox_useFirstInformation.isSelected();
 	}
 }
