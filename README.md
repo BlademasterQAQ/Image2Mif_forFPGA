@@ -1,4 +1,4 @@
-# singleImage2Mif(For FPGA)
+# batchImage2Mif(For FPGA)
 
 ​		本程序可以通过UI界面简单的将图片数据转为可存入FPGA中的文件格式mif
 
